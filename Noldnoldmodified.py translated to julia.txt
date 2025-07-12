@@ -1,0 +1,162 @@
+using LinearAlgebra
+using SparseArrays
+using PyPlot
+using Serialization
+using Printf
+using Random
+
+
+# Global variables:
+p = nothing
+q = nothing
+x_unitcells = nothing
+y_unitcells = nothing
+flux = nothing
+dkx = nothing
+dky = nothing
+nux_list = nothing
+nuy_list = nothing
+kx_list = nothing
+ky_list = nothing
+matrix_size = nothing
+filename = nothing
+
+
+#This can probably done with another package, but I write meshgrid here
+function meshgrid(x, y) 
+    X = repeat(x', length(y), 1)
+    Y = repeat(y, 1, length(x))
+    return X, Y
+end
+
+function OneParticle(p_val, q_val, x_unitcells_val, y_unitcells_val)
+    global p, q, x_unitcells, y_unitcells, flux, dkx, dky, nux_list, nuy_list, kx_list, ky_list, matrix_size, filename
+
+    p = p_val
+    q = q_val
+    x_unitcells = x_unitcells_val
+    y_unitcells = y_unitcells_val
+
+    flux = p / q
+
+    dkx = 2 * pi / x_unitcells
+    dky = 2 * pi / y_unitcells
+
+    nux_list = collect(-x_unitcells ÷ 2 : x_unitcells ÷ 2 - 1)
+    nuy_list = collect(-y_unitcells ÷ 2 : y_unitcells ÷ 2 - 1)
+
+    kx_list = dkx .* nux_list
+    ky_list = dky .* nuy_list
+
+    matrix_size = q
+    filename = "/p=$(p)_q=$(q)_lx=$(x_unitcells)_ly=$(y_unitcells).jls"
+end
+
+function hamiltonian(kx, ky)
+    if matrix_size == 1
+        matrix = 2 * (cos(kx) + cos(ky))
+    elseif matrix_size == 2
+        matrix = [
+            -2 * cos(kx)              1 + exp(-im * ky);
+             1 + exp(im * ky)         2 * cos(kx)
+        ]
+    else
+        main_diag = [2 * cos(kx + 2π * flux * r) for r in 1:q]
+        upper = fill(1.0, q - 1)
+        lower = fill(1.0, q - 1)
+        corner_top = [exp(-im * ky)]
+        corner_bottom = [exp(im * ky)]
+
+        matrix = spdiagm(
+            0 => main_diag,
+            1 => upper,
+           -1 => lower,
+            q - 1 => corner_top,
+           -(q - 1) => corner_bottom
+        )
+    end
+    return -Matrix(matrix)
+end
+
+
+function energy_line(nux, dictionary)
+    kx = dkx * nux
+    for nuy in nuy_list
+        ky = dky * nuy
+        values, vectors = eigen(hamiltonian(kx, ky))
+        sorting = sortperm(values)
+        values = real(values[sorting])
+        vectors = vectors[:, sorting]
+        dictionary[(Int(nux), Int(nuy))] = (values, transpose(vectors))
+    end
+end
+
+function energy_spectrum(; calculate_new=false)
+    filepath = "./dictionaries/one_particle/" * filename
+    mkpath(dirname(filepath))
+
+    if isfile(filepath) && !calculate_new
+        existing_file = open(filepath, "r")
+        energy_dictionary = deserialize(existing_file)
+        close(existing_file)
+    else
+        println("A new dictionary is to be calculated.")
+        energy_dictionary = Dict()
+        for nux in nux_list
+            energy_line(nux, energy_dictionary)
+        end
+        new_file = open(filepath, "w")
+        serialize(new_file, energy_dictionary)
+        close(new_file)
+        println("Calculation done!")
+    end
+    return energy_dictionary
+end
+
+function plot3d()
+    full_energy_list = [zeros(length(kx_list), length(ky_list)) for _ in 1:matrix_size]
+    full_energy_list = permutedims(reshape(hcat(full_energy_list...), (length(kx_list), length(ky_list), matrix_size)), (3, 1, 2))
+
+    energies = energy_spectrum(calculate_new=true)
+
+    for i in 1:length(nux_list), j in 1:length(nuy_list)
+        full_energy_list[:, i, j] = energies[(nux_list[i], nuy_list[j])][1]
+    end
+    full_energy_list = permutedims(full_energy_list, (2, 3, 1))
+
+    kxs, kys = meshgrid(kx_list ./ pi, ky_list ./ pi)
+
+    fig = figure()
+    ax = fig.add_subplot(111, projection="3d")
+    palette = get_cmap("hsv", matrix_size)
+    for r in 1:matrix_size
+        ax.plot_surface(kxs, kys, transpose(full_energy_list[:, :, r]), color=palette(r - 1))
+    end
+
+    font_size = 12
+    ax.set_xlabel(L"k_x/\pi", fontsize=font_size)
+    ax.set_ylabel(L"k_y/\pi", fontsize=font_size)
+    ax.set_zlabel("E/t", fontsize=font_size)
+    title("p/q = $(p)/$(q)")
+    tight_layout()
+end
+
+function plot_state(nux, nuy, band_index=1)
+    energies = energy_spectrum()
+    plotted_state = abs2.(energies[(nux, nuy)][2][band_index, :])
+
+    state_labels = 1:matrix_size
+    PyPlot.bar(state_labels, plotted_state, width=0.8)
+    title(@sprintf("probability density for kx/\u03c0 = %.2f and ky/\u03c0= %.2f and q=%d",
+        dkx * nux / pi, dky * nuy / pi, q))
+    ylim(0, 1)
+    xlabel("site \u03b1")
+    tight_layout()
+end
+
+# Hauptfunktion
+OneParticle(1, 3, 100, 100)
+println(q)
+plot3d()
+plot_state(0, 0, 1)
+# show()
