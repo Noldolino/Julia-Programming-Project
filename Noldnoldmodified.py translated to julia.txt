@@ -1,9 +1,8 @@
-using LinearAlgebra
-using SparseArrays
-using PyPlot
-using Serialization
-using Printf
-using Random
+using LinearAlgebra     #for using eigen and sortperm
+using SparseArrays      #for using spdiagm
+using Serialization     #for using serialize
+using Printf            #for using @sprintf 
+using Plots             #for plots
 
 
 # Global variables:
@@ -124,30 +123,25 @@ function plot3d()
     end
     full_energy_list = permutedims(full_energy_list, (2, 3, 1))
 
-    kxs = repeat(kx_list ./ pi, inner=length(ky_list))
-    kys = repeat(ky_list ./ pi, outer=length(kx_list))
+    kxs, kys = meshgrid(kx_list ./ pi, ky_list ./ pi)
 
-    plt = plot()
+    plt = plot(title = "p/q = $(p)/$(q)", xlabel = "kₓ/π", ylabel = "kᵧ/π", zlabel = "E/t", legend = false)
     for r in 1:matrix_size
-        zvals = vec(full_energy_list[:, :, r])
-        surface!(plt, kxs, kys, zvals, label="Band $r")
+        surface!(plt, kxs, kys, full_energy_list[:, :, r])
     end
-
-    xlabel!(plt, "kₓ/π")
-    ylabel!(plt, "kᵧ/π")
-    zlabel!(plt, "E/t")
-    title!(plt, "p/q = $(p)/$(q)")
     display(plt)
 end
+
 
 function plot_state(nux, nuy, band_index=1)
     energies = energy_spectrum()
     plotted_state = abs2.(energies[(nux, nuy)][2][band_index, :])
 
     state_labels = 1:matrix_size
-    bar(state_labels, plotted_state, legend=false, xlabel="site α", ylabel="|ψ|²",
+    plt2 = Plots.bar(state_labels, plotted_state, legend=false, xlabel="site α", ylabel="|ψ|²", #need to use Plots.bar because its ambiguous otherwise
         title=@sprintf("Prob. dens. for kx/π = %.2f, ky/π = %.2f, q = %d",
         dkx * nux / pi, dky * nuy / pi, q))
+    display(plt2) 
 end
 
 # Hauptfunktion
@@ -155,5 +149,4 @@ OneParticle(1, 3, 100, 100)
 println(q)
 plot3d()
 plot_state(0, 0, 1)
-show()
 
