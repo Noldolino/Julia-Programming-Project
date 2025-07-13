@@ -6,6 +6,7 @@ import scipy.sparse as sp
 import math
 import os.path
 import pickle
+import time
 
 #Global variables:
 p = None
@@ -111,6 +112,7 @@ def plot3d():
         ax.set_zlabel(r"E/t", fontsize=font_size)
         plt.title(f"p/q = {p}/{q}")
         plt.tight_layout()
+        plt.show()
 
 def plot_state(nux, nuy, band_index=0):
         energies = energy_spectrum()
@@ -125,7 +127,14 @@ def plot_state(nux, nuy, band_index=0):
         plt.ylim(0, 1)
         plt.xlabel(r"site $\alpha$")
         plt.tight_layout()
+        plt.show()
+
 
 if __name__ == "__main__":
-    system = OneParticle(4, 6, 100, 100)
+    start = time.time()
+    system = OneParticle(1, 3, 180, 230)
     print(q)
+    plot3d()
+    plot_state(0, 0,1)
+    end = time.time()
+    print(f"the code took {end - start:.4f} seconds to complete.")
