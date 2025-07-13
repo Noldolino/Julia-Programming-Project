@@ -23,8 +23,8 @@ filename = nothing
 
 #This can probably done with another package, but I write meshgrid here
 function meshgrid(x::AbstractVector, y::AbstractVector)
-    X = repeat(x', length(y), 1)  # x': 1×N → repeat auf y → M×N
-    Y = repeat(y, 1, length(x))   # y: M×1 → repeat auf x → M×N
+    X = repeat(x, 1, length(y))         # X: (length(x), length(y))
+    Y = repeat(y', length(x), 1)        # Y: (length(x), length(y))
     return X, Y
 end
 
@@ -117,22 +117,25 @@ end
 
 #creates our band structure by plotting the eigen values of the diagonalized matrices on every kx and ky point
 function plot3d()
-    full_energy_list = [zeros(length(kx_list), length(ky_list)) for _ in 1:matrix_size]
-    full_energy_list = permutedims(reshape(hcat(full_energy_list...), (length(kx_list), length(ky_list), matrix_size)), (3, 1, 2))
+    nx = length(kx_list)
+    ny = length(ky_list)
+
+    full_energy_list = Array{Float64,3}(undef, nx, ny, matrix_size)
 
     energies = energy_spectrum()
 
-    for i in 1:x_unitcells, j in 1:y_unitcells
-        full_energy_list[:, i, j] = energies[(nux_list[i], nuy_list[j])][1]
+    for i in 1:nx, j in 1:ny
+        full_energy_list[i, j, :] = energies[(nux_list[i], nuy_list[j])][1]
     end
-    full_energy_list = permutedims(full_energy_list, (2, 3, 1))
 
     kxs, kys = meshgrid(kx_list ./ pi, ky_list ./ pi)
 
     plt = plot(title = "p/q = $(p)/$(q)", xlabel = "kₓ/π", ylabel = "kᵧ/π", zlabel = "E/t", legend = false)
+
     for r in 1:matrix_size
         surface!(plt, kys, kxs, full_energy_list[:, :, r])
     end
+
     display(plt)
 end
 
@@ -148,8 +151,8 @@ function plot_state(nux, nuy, band_index=1)
     display(plt2) 
 end
 
-# Hauptfunktion
-OneParticle(1, 4, 150,150)
+# Main function
+OneParticle(1, 3, 1000,100)
 println(q)
 plot3d()
 plot_state(0, 0, 1) #kx, ky and band_index
