@@ -154,8 +154,12 @@ function plot_state(nux, nuy, band_index=1)
 end
 
 # Main function
-OneParticle(1, 3, 150,100)
-println(q)
-plot3d()
-plot_state(0, 0, 1) #kx, ky and band_index
+@time begin #gibt die Zeit aus, die gebraucht wird
+    OneParticle(1, 4, 164,300)
+    println(q)
+    plot3d()
+    plot_state(0, 0, 1) #kx, ky and band_index
+    println("the code took ")
+end
+println("to complete") #kx, ky and band_index
 
