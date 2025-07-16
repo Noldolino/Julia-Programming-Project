@@ -90,7 +90,7 @@ function energy_line(nux, dictionary)
         sorting = sortperm(values)
         values = real(values[sorting])
         vectors = vectors[:, sorting]
-        dictionary[(Int(nux), Int(nuy))] = (values, transpose(vectors))
+        dictionary[(Int(nux), Int(nuy))] = (values, vectors)
     end
 end
 
@@ -118,7 +118,7 @@ function energy_spectrum(; calculate_new=false)
 end
 
 #creates our band structure by plotting the eigen values of the diagonalized matrices on every kx and ky point
-function plot3d()
+function plot_3d()
     nx = length(kx_list)
     ny = length(ky_list)
 
@@ -132,7 +132,7 @@ function plot3d()
 
     kxs, kys = meshgrid(kx_list ./ pi, ky_list ./ pi)
 
-    plt = plot(title = "p/q = $(p)/$(q)", xlabel = "kₓ/π", ylabel = "kᵧ/π", zlabel = "E/t", legend = false)
+    plt = Plots.plot(title = "p/q = $(p)/$(q)", xlabel = "kₓ/π", ylabel = "kᵧ/π", zlabel = "E/t", legend = false)
 
     for r in 1:matrix_size
         surface!(plt, kys, kxs, full_energy_list[:, :, r])
@@ -155,9 +155,9 @@ end
 
 # Main function
 @time begin #gibt die Zeit aus, die gebraucht wird
-    OneParticle(1, 4, 164,300)
+    OneParticle(1, 4, 165,300)
     println(q)
-    plot3d()
+    plot_3d()
     plot_state(0, 0, 1) #kx, ky and band_index
     println("the code took ")
 end
