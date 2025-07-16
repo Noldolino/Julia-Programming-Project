@@ -93,7 +93,7 @@ function energy_line_parallel(nux, dictionary)
         sorting = sortperm(values)
         values = real(values[sorting])
         vectors = vectors[:, sorting]
-        dictionary[(Int(nux), Int(nuy))] = (values, transpose(vectors))
+        dictionary[(Int(nux), Int(nuy))] = (values, vectors)
     end
 end
 
@@ -105,7 +105,7 @@ function energy_spectrum_parallel()
 
     Threads.@threads for i in eachindex(nux_list)
         nux = nux_list[i]
-        energy_line(nux, dicts[Threads.threadid()])
+        energy_line_parallel(nux, dicts[Threads.threadid()])
     end
     #merge all dicts
     energy_dictionary = Dict{Tuple{Int, Int}, Tuple{Vector{Float64}, Matrix{ComplexF64}}}()
@@ -119,12 +119,12 @@ end
 
 
 #creates our band structure by plotting the eigen values of the diagonalized matrices on every kx and ky point
-function plot3d_parallel()
+function plot_3d_parallel()
     nx = length(kx_list)
     ny = length(ky_list)
     full_energy_list = Array{Float64,3}(undef, nx, ny, matrix_size)
 
-    energies = energy_spectrum()
+    energies = energy_spectrum_parallel()
 
     Threads.@threads for idx in 1:(nx * ny)
         i = (idx - 1) ÷ ny + 1
@@ -134,7 +134,7 @@ function plot3d_parallel()
 
     kxs, kys = meshgrid(kx_list ./ pi, ky_list ./ pi)
 
-    plt = plot(title = "p/q = $(p)/$(q)", xlabel = "kₓ/π", ylabel = "kᵧ/π", zlabel = "E/t", legend = false)
+    plt = Plots.plot(title = "p/q = $(p)/$(q)", xlabel = "kₓ/π", ylabel = "kᵧ/π", zlabel = "E/t", legend = false)
 
     for r in 1:matrix_size
         surface!(plt, kys, kxs, full_energy_list[:, :, r])
@@ -145,7 +145,7 @@ end
 
 #gives the probability distribution of the particle  to be in a site in the bloch state of kx and ky in the corresponding band
 function plot_state(nux, nuy, band_index=1)
-    energies = energy_spectrum()
+    energies = energy_spectrum_parallel()
     plotted_state = abs2.(energies[(nux, nuy)][2][band_index, :])
 
     state_labels = 1:matrix_size
@@ -157,9 +157,9 @@ end
 
 # Main function
 @time begin #gibt die Zeit aus, die gebraucht wird
-    OneParticle(1, 4, 164,300)
+    OneParticle(1, 4, 165,300)
     println(q)
-    plot3d()
+    plot_3d_parallel()
     plot_state(0, 0, 1) #kx, ky and band_index
     println("the code took ")
 end
