@@ -137,7 +137,7 @@ function plot_3d_parallel()
     plt = Plots.plot(title = "p/q = $(p)/$(q)", xlabel = "kₓ/π", ylabel = "kᵧ/π", zlabel = "E/t", legend = false)
 
     for r in 1:matrix_size
-        surface!(plt, kys, kxs, full_energy_list[:, :, r])
+        surface!(plt, kxs, kys, full_energy_list[:, :, r])
     end
 
     display(plt)
