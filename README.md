@@ -15,4 +15,4 @@ Use INTEGERS for all inputs with
 0 =< nuy =< y_unitcells
 0 =< band_index =< q
 
-Read the project report for more information.
+Read the project report "RSE Julia Poject Report" for more information.
